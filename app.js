@@ -18,6 +18,7 @@
   retryCount: 0,
   retryTimer: null,
   hls: null,
+  allowedOutputFormats: [],
 };
 
 const els = {
@@ -162,6 +163,9 @@ async function login(username, password, silent) {
   state.username = username;
   state.password = password;
   state.profile = payload;
+  state.allowedOutputFormats = Array.isArray(user.allowed_output_formats)
+    ? user.allowed_output_formats.map((v) => String(v).toLowerCase())
+    : [];
 
   localStorage.setItem(
     "webplayer_next_session",
@@ -188,6 +192,7 @@ function logout() {
   state.username = "";
   state.password = "";
   state.profile = null;
+  state.allowedOutputFormats = [];
   state.categories = [];
   state.items = [];
   state.epg = [];
@@ -368,9 +373,9 @@ async function selectItem(item) {
   }
 
   if (item.mode === "movie") {
-    const ext = item.extension || "mp4";
-    const url = `/movie/${encodeURIComponent(state.username)}/${encodeURIComponent(state.password)}/${encodeURIComponent(item.id)}.${encodeURIComponent(ext)}`;
-    const engine = ext === "m3u8" ? "hls" : "file";
+    const source = pickOnDemandSource(item.extension);
+    const url = `/movie/${encodeURIComponent(state.username)}/${encodeURIComponent(state.password)}/${encodeURIComponent(item.id)}.${encodeURIComponent(source.ext)}`;
+    const engine = source.engine;
     state.currentPlayType = "movie";
     state.currentPlayEngine = engine;
     state.retryCount = 0;
@@ -456,8 +461,9 @@ async function selectEpisode(episode) {
   state.selectedItemId = episode.id;
   renderEpisodes();
 
-  const url = `/series/${encodeURIComponent(state.username)}/${encodeURIComponent(state.password)}/${encodeURIComponent(episode.id)}.${encodeURIComponent(episode.extension)}`;
-  const engine = episode.extension === "m3u8" ? "hls" : "file";
+  const source = pickOnDemandSource(episode.extension);
+  const url = `/series/${encodeURIComponent(state.username)}/${encodeURIComponent(state.password)}/${encodeURIComponent(episode.id)}.${encodeURIComponent(source.ext)}`;
+  const engine = source.engine;
   state.currentPlayType = "series";
   state.currentPlayEngine = engine;
   state.retryCount = 0;
@@ -543,6 +549,25 @@ function renderEpg() {
     .join("");
 
   els.epgList.innerHTML = html;
+}
+
+function pickOnDemandSource(originalExtension) {
+  const allowed = new Set(
+    (state.allowedOutputFormats || []).map((value) =>
+      String(value).trim().toLowerCase(),
+    ),
+  );
+
+  if (allowed.has("m3u8")) {
+    return { ext: "m3u8", engine: "hls" };
+  }
+
+  if (allowed.has("ts")) {
+    return { ext: "ts", engine: "file" };
+  }
+
+  const ext = String(originalExtension || "mp4").toLowerCase();
+  return { ext, engine: ext === "m3u8" ? "hls" : "file" };
 }
 
 async function startPlayback(url, type) {
