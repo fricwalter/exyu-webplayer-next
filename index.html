@@ -1,0 +1,97 @@
+﻿<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EXYU IPTV Player</title>
+    <meta name="theme-color" content="#2563eb" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="bg-orb orb-a"></div>
+    <div class="bg-orb orb-b"></div>
+
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">EX</div>
+        <div class="brand-text">
+          <strong>EXYU</strong>
+          <span>IPTV Player</span>
+        </div>
+      </div>
+      <div id="sessionInfo" class="session-info hidden"></div>
+      <button id="logoutBtn" class="btn ghost hidden" type="button">Logout</button>
+    </header>
+
+    <main class="app-shell">
+      <section id="loginCard" class="login-card">
+        <h1>Login</h1>
+        <p class="muted">Mit Xtream Benutzername und Passwort anmelden</p>
+        <form id="loginForm" class="login-form">
+          <label>
+            Benutzername
+            <input id="usernameInput" autocomplete="username" required />
+          </label>
+          <label>
+            Passwort
+            <input id="passwordInput" type="password" autocomplete="current-password" required />
+          </label>
+          <button id="loginBtn" class="btn primary" type="submit">Einloggen</button>
+        </form>
+        <p id="loginStatus" class="status-line"></p>
+      </section>
+
+      <section id="playerApp" class="player-app hidden">
+        <aside class="sidebar">
+          <div class="mode-tabs">
+            <button class="mode-btn active" data-mode="live" type="button">Live</button>
+            <button class="mode-btn" data-mode="movie" type="button">Movies</button>
+            <button class="mode-btn" data-mode="series" type="button">Serien</button>
+          </div>
+          <div class="search-wrap">
+            <input id="searchInput" placeholder="Suchen..." />
+          </div>
+          <h3>Kategorien</h3>
+          <div id="categoryList" class="list category-list"></div>
+        </aside>
+
+        <section class="content">
+          <div class="content-head">
+            <h2 id="contentTitle">Live Channels</h2>
+            <span id="contentMeta" class="muted"></span>
+          </div>
+          <div id="itemList" class="list item-list"></div>
+        </section>
+
+        <section class="viewer">
+          <div class="video-wrap">
+            <video id="video" controls playsinline autoplay></video>
+            <div id="videoOverlay" class="video-overlay hidden"></div>
+          </div>
+          <div id="nowPlaying" class="now-playing">Kein Stream aktiv</div>
+
+          <div id="seriesPanel" class="panel hidden">
+            <div class="panel-head">
+              <h3>Folgen</h3>
+              <button id="closeSeriesBtn" class="btn ghost small" type="button">Schließen</button>
+            </div>
+            <div id="episodeList" class="list episode-list"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h3>EPG</h3>
+            </div>
+            <div id="epgList" class="list epg-list"></div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.2/dist/hls.min.js"></script>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

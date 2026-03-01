@@ -1,0 +1,10 @@
+﻿_worker.js
+wrangler.toml
+.assetsignore
+README.md
+docs/
+.git/
+.gitignore
+package.json
+.wrangler/
+*.md

@@ -1,0 +1,15 @@
+﻿name = "exyu-webplayer-next"
+main = "_worker.js"
+compatibility_date = "2026-03-01"
+workers_dev = true
+account_id = "21b058f792197fa0a48926aa867f845e"
+
+[assets]
+directory = "."
+binding = "ASSETS"
+
+[vars]
+UPSTREAM_DNS = "http://line.yuline.online"
+UPSTREAM_DNS_LIST = "http://homekl.com,http://vpn.homekl.com,http://homeklonline.com,http://vpn.homeklonline.com,http://line.iptvpro.stream,http://synciptv.org,http://official8k.com,http://slayerteam.in.rs,http://5frtv.site,http://xentv.top,http://portal.tv-ks.top,http://tv4mc.xyz,http://fr.tx-4k.com,http://vpn.exyuproxy.com,http://pajdas.com"
+CORS_ALLOW_ORIGIN = "*"
+MEDIA_USER_AGENT = "VLC/3.0.9 LibVLC/3.0.9"
