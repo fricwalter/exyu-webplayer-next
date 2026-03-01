@@ -10,6 +10,7 @@
   selectedSeriesId: "",
   currentPlayUrl: "",
   currentPlayType: "",
+  currentPlayEngine: "",
   epg: [],
   episodes: [],
   search: "",
@@ -358,6 +359,7 @@ async function selectItem(item) {
   if (item.mode === "live") {
     const url = `/live/${encodeURIComponent(state.username)}/${encodeURIComponent(state.password)}/${encodeURIComponent(item.id)}.m3u8`;
     state.currentPlayType = "live";
+    state.currentPlayEngine = "hls";
     state.retryCount = 0;
     await startPlayback(url, "hls");
     els.nowPlaying.textContent = `Live: ${item.name}`;
@@ -368,9 +370,11 @@ async function selectItem(item) {
   if (item.mode === "movie") {
     const ext = item.extension || "mp4";
     const url = `/movie/${encodeURIComponent(state.username)}/${encodeURIComponent(state.password)}/${encodeURIComponent(item.id)}.${encodeURIComponent(ext)}`;
+    const engine = ext === "m3u8" ? "hls" : "file";
     state.currentPlayType = "movie";
+    state.currentPlayEngine = engine;
     state.retryCount = 0;
-    await startPlayback(url, ext === "m3u8" ? "hls" : "file");
+    await startPlayback(url, engine);
     els.nowPlaying.textContent = `Movie: ${item.name}`;
     state.epg = [];
     renderEpg();
@@ -453,8 +457,11 @@ async function selectEpisode(episode) {
   renderEpisodes();
 
   const url = `/series/${encodeURIComponent(state.username)}/${encodeURIComponent(state.password)}/${encodeURIComponent(episode.id)}.${encodeURIComponent(episode.extension)}`;
+  const engine = episode.extension === "m3u8" ? "hls" : "file";
+  state.currentPlayType = "series";
+  state.currentPlayEngine = engine;
   state.retryCount = 0;
-  await startPlayback(url, episode.extension === "m3u8" ? "hls" : "file");
+  await startPlayback(url, engine);
   els.nowPlaying.textContent = `Serie: ${episode.title}`;
   state.epg = [];
   renderEpg();
@@ -541,16 +548,15 @@ function renderEpg() {
 async function startPlayback(url, type) {
   const token = ++state.playToken;
   state.currentPlayUrl = url;
+  state.currentPlayEngine = type === "hls" || url.endsWith(".m3u8") ? "hls" : "file";
   clearRetry();
   stopPlayback(false);
   showOverlay("Verbinde ...");
-
-  await sleep(900);
   if (token !== state.playToken) {
     return;
   }
 
-  if (type === "hls" || url.endsWith(".m3u8")) {
+  if (state.currentPlayEngine === "hls") {
     await playHls(url, token);
   } else {
     await playFile(url, token);
@@ -580,9 +586,10 @@ async function playHls(url, token) {
   }
 
   state.hls = new window.Hls({
-    lowLatencyMode: false,
-    maxBufferLength: 20,
-    backBufferLength: 10,
+    lowLatencyMode: true,
+    maxBufferLength: 8,
+    backBufferLength: 4,
+    maxLiveSyncPlaybackRate: 1.5,
   });
 
   state.hls.on(window.Hls.Events.ERROR, (_, data) => {
@@ -631,12 +638,12 @@ function scheduleRetry(reason) {
     return;
   }
 
-  const waitMs = state.retryCount === 0 ? 1600 : 3200;
+  const waitMs = state.retryCount === 0 ? 350 : 900;
   state.retryCount += 1;
   showOverlay(`Reconnect ${state.retryCount}/2 ...`);
   clearRetry();
   state.retryTimer = setTimeout(() => {
-    startPlayback(state.currentPlayUrl, state.currentPlayType === "live" ? "hls" : "file").catch(() => {
+    startPlayback(state.currentPlayUrl, state.currentPlayEngine || (state.currentPlayType === "live" ? "hls" : "file")).catch(() => {
       showOverlay("Stream konnte nicht wiederhergestellt werden.");
     });
   }, waitMs);
@@ -654,6 +661,8 @@ function stopPlayback(fullReset) {
 
   if (state.hls) {
     try {
+      state.hls.stopLoad();
+      state.hls.detachMedia();
       state.hls.destroy();
     } catch {
       // ignore
@@ -663,6 +672,8 @@ function stopPlayback(fullReset) {
 
   const video = els.video;
   video.pause();
+  video.currentTime = 0;
+  video.srcObject = null;
   video.removeAttribute("src");
   video.load();
 
@@ -670,6 +681,7 @@ function stopPlayback(fullReset) {
     state.playToken += 1;
     state.currentPlayUrl = "";
     state.currentPlayType = "";
+    state.currentPlayEngine = "";
     showOverlay("");
   }
 }
@@ -733,10 +745,6 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#039;");
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function formatTime(ts) {

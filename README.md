@@ -20,6 +20,10 @@ npm run dev
 npm run deploy
 ```
 
+Aktive URLs:
+- `https://exyu-webplayer-next.morning-wind-d985.workers.dev`
+- `https://webplayer.exyuiptv.org`
+
 ## Konfiguration
 
 `wrangler.toml`:
@@ -32,3 +36,4 @@ npm run deploy
 
 - Bei Providern mit `max_connections=1` ist schnelles Zappen weiterhin providerseitig limitiert.
 - Worker versucht Streams beim Umschalten sauber abzubrechen.
+- Zapping wurde clientseitig beschleunigt (kein extra Delay, schnellere Retries, harter Stream-Stop).

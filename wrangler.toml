@@ -4,6 +4,10 @@ compatibility_date = "2026-03-01"
 workers_dev = true
 account_id = "21b058f792197fa0a48926aa867f845e"
 
+[[routes]]
+pattern = "webplayer.exyuiptv.org"
+custom_domain = true
+
 [assets]
 directory = "."
 binding = "ASSETS"
