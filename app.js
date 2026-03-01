@@ -594,48 +594,68 @@ async function playHls(url, token) {
   }
 
   const video = els.video;
-  if (video.canPlayType("application/vnd.apple.mpegurl")) {
-    video.src = url;
-    try {
-      await video.play();
-      showOverlay("");
-    } catch {
-      scheduleRetry("Native HLS Play failed");
-    }
+  const hasHlsJs = Boolean(window.Hls && window.Hls.isSupported());
+  const hasNativeHls = Boolean(video.canPlayType("application/vnd.apple.mpegurl"));
+
+  // Prefer hls.js first; native playback can be flaky in some browsers.
+  if (hasHlsJs) {
+    state.hls = new window.Hls({
+      lowLatencyMode: true,
+      maxBufferLength: 8,
+      backBufferLength: 4,
+      maxLiveSyncPlaybackRate: 1.5,
+    });
+
+    state.hls.on(window.Hls.Events.ERROR, (_, data) => {
+      if (data?.fatal) {
+        scheduleRetry(`HLS fatal: ${data.type || "unknown"}`);
+      }
+    });
+
+    state.hls.loadSource(url);
+    state.hls.attachMedia(video);
+    state.hls.on(window.Hls.Events.MANIFEST_PARSED, async () => {
+      if (token !== state.playToken) {
+        return;
+      }
+      try {
+        const started = await tryPlayVideo(video);
+        if (started) {
+          showOverlay("");
+        }
+      } catch {
+        if (hasNativeHls) {
+          await playNativeHls(url, token);
+          return;
+        }
+        scheduleRetry("HLS autoplay failed");
+      }
+    });
     return;
   }
 
-  if (!(window.Hls && window.Hls.isSupported())) {
+  if (!hasNativeHls) {
     showOverlay("HLS wird in diesem Browser nicht unterstuetzt.");
     return;
   }
 
-  state.hls = new window.Hls({
-    lowLatencyMode: true,
-    maxBufferLength: 8,
-    backBufferLength: 4,
-    maxLiveSyncPlaybackRate: 1.5,
-  });
+  await playNativeHls(url, token);
+}
 
-  state.hls.on(window.Hls.Events.ERROR, (_, data) => {
-    if (data?.fatal) {
-      scheduleRetry(`HLS fatal: ${data.type || "unknown"}`);
-    }
-  });
-
-  state.hls.loadSource(url);
-  state.hls.attachMedia(video);
-  state.hls.on(window.Hls.Events.MANIFEST_PARSED, async () => {
-    if (token !== state.playToken) {
-      return;
-    }
-    try {
-      await video.play();
+async function playNativeHls(url, token) {
+  if (token !== state.playToken) {
+    return;
+  }
+  const video = els.video;
+  video.src = url;
+  try {
+    const started = await tryPlayVideo(video);
+    if (started) {
       showOverlay("");
-    } catch {
-      scheduleRetry("HLS autoplay failed");
     }
-  });
+  } catch {
+    scheduleRetry("Native HLS failed");
+  }
 }
 
 async function playFile(url, token) {
@@ -646,11 +666,35 @@ async function playFile(url, token) {
   const video = els.video;
   video.src = url;
   try {
-    await video.play();
-    showOverlay("");
+    const started = await tryPlayVideo(video);
+    if (started) {
+      showOverlay("");
+    }
   } catch {
     scheduleRetry("File playback failed");
   }
+}
+
+async function tryPlayVideo(video) {
+  try {
+    await video.play();
+    return true;
+  } catch (error) {
+    if (isAutoplayBlocked(error)) {
+      showOverlay("Autoplay blockiert. Bitte Play klicken.");
+      return false;
+    }
+    throw error;
+  }
+}
+
+function isAutoplayBlocked(error) {
+  const name = String(error?.name || "");
+  if (name === "NotAllowedError") {
+    return true;
+  }
+  const message = String(error?.message || "").toLowerCase();
+  return message.includes("user gesture") || message.includes("autoplay");
 }
 
 function scheduleRetry(reason) {
